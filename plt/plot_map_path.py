@@ -106,3 +106,90 @@ def plot_map_only(
 ) -> None:
     """仅绘制地图，不画路径。其余参数同 plot_map_path。"""
     plot_map_path(map_data, path=None, title=title, **kwargs)
+
+
+def plot_map_paths(
+    map_data: Union[object, np.ndarray],
+    global_path: Optional[List[Tuple[int, int]]] = None,
+    mpc_path: Optional[List[Tuple[int, int]]] = None,
+    start: Optional[Tuple[int, int]] = None,
+    goal: Optional[Tuple[int, int]] = None,
+    show_grid: bool = True,
+    figsize: Optional[Tuple[float, float]] = None,
+    save_path: Optional[str] = None,
+) -> None:
+    """
+    同时绘制全局路径（A*）和 MPC 局部轨迹。
+
+    参数
+    ----------
+    map_data : Map 实例或 np.ndarray
+    global_path : list of (row, col), optional
+        A* 全局路径
+    mpc_path : list of (row, col), optional
+        MPC 实际轨迹
+    start, goal : (row, col), optional
+        起终点
+    show_grid, figsize, save_path : 同 plot_map_path
+    """
+    # 统一得到 map_matrix, start, goal
+    if isinstance(map_data, np.ndarray):
+        map_matrix = np.asarray(map_data)
+        start_ = start
+        goal_ = goal
+    else:
+        if hasattr(map_data, "map"):
+            map_matrix = np.asarray(map_data.map)
+        elif hasattr(map_data, "get_matrix"):
+            map_matrix = np.asarray(map_data.get_matrix())
+        else:
+            raise ValueError("map_data 需提供 .map 或 .get_matrix()")
+        start_ = tuple(map_data.start) if hasattr(map_data, "start") else start
+        goal_ = tuple(map_data.goal) if hasattr(map_data, "goal") else goal
+    if start is not None:
+        start_ = tuple(start)
+    if goal is not None:
+        goal_ = tuple(goal)
+
+    h, w = map_matrix.shape
+    if figsize is None:
+        figsize = (max(6, w / 40), max(6, h / 40))
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    # 地图
+    cmap = plt.cm.binary
+    ax.imshow(map_matrix, cmap=cmap, origin="upper", vmin=0, vmax=1)
+
+    # 起点、终点
+    if start_ is not None:
+        ax.plot(start_[1], start_[0], "go", markersize=10, zorder=3)
+    if goal_ is not None:
+        ax.plot(goal_[1], goal_[0], "r*", markersize=14, zorder=3)
+
+    # 全局路径（A*）
+    if global_path and len(global_path) > 0:
+        cols = [p[1] for p in global_path]
+        rows = [p[0] for p in global_path]
+        ax.plot(cols, rows, "b--", linewidth=1.5, alpha=0.6, zorder=1, label="A* Global")
+
+    # MPC 轨迹
+    if mpc_path and len(mpc_path) > 0:
+        cols = [p[1] for p in mpc_path]
+        rows = [p[0] for p in mpc_path]
+        ax.plot(cols, rows, "m-", linewidth=2, alpha=0.9, zorder=2, label="MPC Local")
+        ax.plot(cols, rows, "m.", markersize=2, alpha=0.7, zorder=2)
+
+    if show_grid:
+        ax.set_xticks(np.arange(-0.5, w, 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, h, 1), minor=True)
+        ax.grid(which="minor", color="gray", linewidth=0.3, alpha=0.5)
+        ax.tick_params(which="minor", size=0)
+
+    ax.set_xlim(-0.5, w - 0.5)
+    ax.set_ylim(h - 0.5, -0.5)
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.show()
