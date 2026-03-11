@@ -2,7 +2,7 @@ from env.map_2 import Map
 from astar.improverd_astar import Astar as Astar_improved
 from astar.astar_planner import Astar
 from path_smooth.path_smooth import smooth_astar_path
-from plt.plot_map_path import plot_map_path, plot_three_paths
+from plt.plot_map_path import Plotter
 
 
 def main():
@@ -23,14 +23,14 @@ def main():
     )
     smooth_path = [(float(x), float(y)) for x, y in zip(x_smooth, y_smooth)]
 
+    # 使用 Plotter 统一绘图
+    plotter = Plotter(m.map, show_grid=True)
     # 分别绘制：原始 A*、改进 A*、轨迹优化后的路径
-    plot_map_path(m.map, astar_path, start, goal)
-    plot_map_path(m.map, astar_improved_path, start, goal)
-    plot_map_path(m.map, smooth_path, start, goal)
-
-    # 可选：在一张图上对比 A* / 平滑轨迹（便于直观比较）
-    plot_three_paths(
-        m.map,
+    plotter.plot_map_path(astar_path, start, goal)
+    plotter.plot_map_path(astar_improved_path, start, goal)
+    plotter.plot_map_path(smooth_path, start, goal)
+    # 在一张图上对比 A* / 平滑轨迹（便于直观比较）
+    plotter.plot_three_paths(
         astar_path=astar_improved_path,
         smooth_path=smooth_path,
         start=start,
