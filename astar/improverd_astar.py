@@ -1,59 +1,49 @@
 # 参考自论文：基于改进A星算法融合改进动态窗口法的无人机动态避障方法研究_朱亚凯.pdf
 import heapq
 import numpy as np
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple
 
 class Node:
-    __slots__ = ("pos", "g", "h", "f")
+    __slots__ = ("pos", "g", "h", "d", "f")
 
-    def __init__(self, pos: Tuple[int, int], g: float, h: float):
+    def __init__(self, pos: Tuple[int, int], g: float, h: float, d: float):
         self.pos = pos  # (row, col)
         self.g = g  # 从起点到当前节点的实际代价
         self.h = h  # 启发式函数值
-        self.f = g + h  # g + h，用于堆排序
+        self.d = d  # 障碍物安全距离
+        self.f = g + h + d  # g + h + d，用于堆排序
 
     def __lt__(self, other: "Node") -> bool:
         return self.f < other.f
 
 class Astar:
     def __init__(self, safety_distance: int = 2):
-        """
-        Args:
-            safety_distance: 障碍物安全距离（膨胀半径），单位：栅格数
-        """
+        # 搜索方向：8个；safety_distance：搜索障碍物的栅格范围
         self._neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         self.safety_distance = safety_distance
-
-    # 计算从起点到当前节点的实际代价 g
-    def _get_g(self, parent_g: float, dr: int, dc: int) -> float:
-        cost = np.sqrt(2) if dr != 0 and dc != 0 else 1.0
-        return parent_g + cost
+        self.m = self.safety_distance + 1.0
 
     # 计算从当前节点到终点的启发式估计代价 h
     def _get_h(self, current: Tuple[int, int], goal: Tuple[int, int]) -> float:
         return np.sqrt((current[0] - goal[0]) ** 2 + (current[1] - goal[1]) ** 2)
 
+    # 计算移动代价（从父节点到当前节点）
+    def _get_move_cost(self, dr: int, dc: int) -> float:
+        return np.sqrt(2) if dr != 0 and dc != 0 else 1.0
+
+    # 计算节点到障碍物的代价d
+    def _get_d(self, map_matrix: np.ndarray, node: Tuple[int, int], h: int, w: int):
+        min_dist = self._get_min_dist(map_matrix, node, h, w, self.safety_distance)
+        d = self.m - min_dist
+        return d
+
     # 障碍物安全距离扩展函数：计算节点到最近障碍物的距离
-    def _get_d(self, map_matrix: np.ndarray, node: Tuple[int, int], h: int, w: int, safety_distance: int = 1) -> float:
-        """
-        计算节点到最近障碍物的距离（用于安全距离扩展）
-        
-        Args:
-            map_matrix: 地图矩阵，0=可通行，1=障碍物
-            node: 节点坐标 (row, col)
-            h, w: 地图尺寸
-            safety_distance: 安全距离范围（搜索半径）
-            
-        Returns:
-            到最近障碍物的距离，如果节点本身是障碍物返回 0，如果范围内无障碍物返回安全距离+1
-        """
+    def _get_min_dist(self, map_matrix: np.ndarray, node: Tuple[int, int], h: int, w: int, safety_distance: int = 1) -> float:
         r, c = node
         if not (0 <= r < h and 0 <= c < w):
             return 0.0
-        
         if map_matrix[r, c] == 1:
-            return 0.0
-        
+            return 0.0 
         # 在安全距离范围内搜索障碍物
         min_dist = float('inf')
         for dr in range(-safety_distance, safety_distance + 1):
@@ -63,7 +53,6 @@ class Astar:
                     if map_matrix[nr, nc] == 1:
                         dist = np.sqrt(dr**2 + dc**2)
                         min_dist = min(min_dist, dist)
-        
         return min_dist if min_dist != float('inf') else safety_distance + 1.0 
 
     def plan(self, map_matrix: np.ndarray, start, goal):
@@ -76,7 +65,10 @@ class Astar:
         if not self._is_valid(map_matrix, start, h, w) or not self._is_valid(map_matrix, goal, h, w):
             return None
 
-        open_set = [Node(start, 0, self._get_h(start, goal))] # 优先队列，用于存储待扩展的格子
+        # 拓展路径与障碍物相对距离系数
+        d_start = self._get_d(map_matrix, start, h, w)
+        
+        open_set = [Node(start, 0, self._get_h(start, goal), d_start)] # 优先队列，用于存储待扩展的格子
         close_set = set[Any]() # 集合，用于存储已经扩展的格子
         g_map = {start: 0}  # 键：格子坐标；值：代价
         parent_map = {start: None}
@@ -84,14 +76,11 @@ class Astar:
         # while open_set 语法注释：空容器：False；非空容器：True
         while open_set:
             node = heapq.heappop(open_set) # heappop函数用于从优先队列中弹出优先级最高的节点，取出f值最小的节点
-
             if node.pos in close_set:
                 continue
             close_set.add(node.pos)
-
             if node.pos == goal:
                 return self._reconstruct_path(parent_map, goal)
-
             for dr, dc in self._neighbors:
                 nr, nc = node.pos[0] + dr, node.pos[1] + dc
                 npos = (nr, nc)
@@ -99,25 +88,25 @@ class Astar:
                 if not self._is_valid(map_matrix, npos, h, w) or npos in close_set:
                     continue
 
-                # 计算节点到障碍物的安全距离
-                d = self._get_d(map_matrix, npos, h, w, self.safety_distance)
+                # 计算节点到障碍物的最小距离
+                min_dist = self._get_min_dist(map_matrix, npos, h, w, self.safety_distance)
                 
                 # 如果节点太靠近障碍物（距离小于安全距离），跳过该节点
-                if d < self.safety_distance:
+                if min_dist < self.safety_distance:
                     continue
 
-                ng = self._get_g(node.g, dr, dc)
-                # 根据到障碍物的距离调整代价：距离越近，代价越高
-                if d < self.safety_distance + 1.0:
-                    # 安全距离惩罚：距离越近，惩罚越大
-                    penalty = (self.safety_distance + 1.0 - d) * 0.5
-                    ng += penalty
+                # 计算移动代价
+                move_cost = self._get_move_cost(dr, dc)
+                ng = node.g + move_cost
+                
+                # 计算障碍物距离代价 d
+                d = self._get_d(map_matrix, npos, h, w)
                 
                 if npos not in g_map or ng < g_map[npos]:
                     g_map[npos] = ng
                     nh = self._get_h(npos, goal)
                     parent_map[npos] = node.pos
-                    heapq.heappush(open_set, Node(npos, ng, nh))
+                    heapq.heappush(open_set, Node(npos, ng, nh, d))
 
         return None
 

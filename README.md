@@ -32,13 +32,27 @@
 
 ```
 Astar-MPC/
-├── main.py          # 程序入口，串联全局规划与局部规划
-├── README.md
-├── env/             # 环境与地图
-│   └── map.py       # 栅格地图类 Map，定义障碍物、起点、终点
-├── astar/           # A* 全局路径规划模块
-├── mpc/             # MPC 局部路径规划模块
-└── plt/             # 绘图与可视化
+├── main.py                    # 程序入口
+├── README.md                   # 项目说明文档
+├── astar_mpc.docx              # 项目文档
+├── env/                        # 环境配置
+│   ├── map_1.py                # 栅格地图:500*500
+│   └── map_2.py                # 栅格地图:60*60
+├── astar/                      # A*算法模块
+│   ├── __init__.py
+│   ├── astar_planner.py       # 传统A*算法
+│   ├── improverd_astar.py     # 改进A*算法
+│   └── README.md
+├── mpc/                        # MPC控制器模块
+│   ├── __init__.py
+│   └── mpc_controller.py       # MPC控制器
+├── plt/                        # 绘图与可视化模块
+│   ├── __init__.py
+│   └── plot_map_path.py       # 路径可视化
+├── media/                      # 媒体资源
+│   ├── 传统Astar.png
+│   └── 改进Astar.png
+└── paper_ref/                  # 参考文献
 ```
 
 ### 参考资料

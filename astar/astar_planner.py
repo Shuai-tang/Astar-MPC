@@ -1,7 +1,6 @@
 import heapq
 import numpy as np
-from typing import Any, List, Tuple, Optional
-
+from typing import Any, List, Tuple
 
 class Node:
     __slots__ = ("pos", "g", "h", "f")
@@ -12,6 +11,7 @@ class Node:
         self.h = h  # 启发式函数值
         self.f = g + h  # g + h，用于堆排序
 
+    # 用于堆排序,比较价值f的大小
     def __lt__(self, other: "Node") -> bool:
         return self.f < other.f
 
