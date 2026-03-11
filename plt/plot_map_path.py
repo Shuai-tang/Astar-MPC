@@ -1,7 +1,3 @@
-"""
-地图与路径可视化
-支持 env 下 Map 类（含 get_matrix 或 .map、.start、.goal）及 A* 路径
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Optional, Union
@@ -12,7 +8,6 @@ def plot_map_path(
     path: Optional[List[Tuple[int, int]]] = None,
     start: Optional[Tuple[int, int]] = None,
     goal: Optional[Tuple[int, int]] = None,
-    title: str = "Map and Path",
     show_grid: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     save_path: Optional[str] = None,
