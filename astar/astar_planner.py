@@ -1,81 +1,63 @@
-"""
-A* 全局路径规划器
-在栅格地图上搜索从起点到终点的最优路径
-"""
 import heapq
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import Any, List, Tuple, Optional
 
 
+class Node:
+    __slots__ = ("pos", "g", "f") # 用来限制类实例可以有哪些属性，用来限制内存
+
+    def __init__(self, pos: Tuple[int, int], g: float, f: float):
+        self.pos = pos  # (row, col)
+        self.g = g  # 从起点到当前节点的实际代价
+        self.f = f  # g + h，用于堆排序
+
+    def __lt__(self, other: "Node") -> bool:
+        return self.f < other.f
+
+# AstarPlanner类，实现Astar算法
 class AstarPlanner:
-    """标准 A* 路径规划器，支持 4/8 邻域"""
+    def __init__(self):
+        self._neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        self._cost_diag = np.sqrt(2) # np.sqrt函数用于求解平方根
 
-    def __init__(self, allow_diagonal: bool = True):
-        """
-        Args:
-            allow_diagonal: True 为 8 邻域，False 为 4 邻域
-        """
-        self.allow_diagonal = allow_diagonal
-        if allow_diagonal:
-            self._neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-            self._cost_diag = np.sqrt(2)
-        else:
-            self._neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            self._cost_diag = 1.0
-
-    def plan(
-        self,
-        map_matrix: np.ndarray,
-        start: Tuple[int, int],
-        goal: Tuple[int, int],
-    ) -> Optional[List[Tuple[int, int]]]:
-        """
-        在栅格地图上规划从 start 到 goal 的路径
-
-        Args:
-            map_matrix: 2D 数组，0=可通行，1=障碍物
-            start: 起点 (row, col)
-            goal: 终点 (row, col)
-
-        Returns:
-            路径点列表 [(row, col), ...]，无解时返回 None
-        """
+    def plan(self,map_matrix: np.ndarray, start, goal):
+        # 获取地图的行数和列数
         h, w = map_matrix.shape
-        start = (int(start[0]), int(start[1]))
-        goal = (int(goal[0]), int(goal[1]))
+        start = (start[0], start[1])
+        goal = (goal[0], goal[1])
 
+        # 判断起点和终点是否在地图内，即传入数据合理性
         if not self._is_valid(map_matrix, start, h, w) or not self._is_valid(map_matrix, goal, h, w):
             return None
 
-        # (f, g, node, parent)
-        open_set = [(0, 0, start, None)]
-        closed = set()
+        open_set = [Node(start, 0, 0)]
+        closed_set = set[Any]()
         g_map = {start: 0}
         parent_map = {start: None}
 
         while open_set:
-            f, g, node, parent = heapq.heappop(open_set)
+            node = heapq.heappop(open_set)
 
-            if node in closed:
+            if node.pos in closed_set:
                 continue
-            closed.add(node)
-            parent_map[node] = parent
+            closed_set.add(node.pos)
 
-            if node == goal:
+            if node.pos == goal:
                 return self._reconstruct_path(parent_map, goal)
 
             for dr, dc in self._neighbors:
-                nr, nc = node[0] + dr, node[1] + dc
-                nnode = (nr, nc)
-                if not self._is_valid(map_matrix, nnode, h, w) or nnode in closed:
+                nr, nc = node.pos[0] + dr, node.pos[1] + dc
+                npos = (nr, nc)
+                if not self._is_valid(map_matrix, npos, h, w) or npos in closed_set:
                     continue
 
                 cost = self._cost_diag if dr != 0 and dc != 0 else 1.0
-                ng = g + cost
-                if nnode not in g_map or ng < g_map[nnode]:
-                    g_map[nnode] = ng
-                    nf = ng + self._heuristic(nnode, goal)
-                    heapq.heappush(open_set, (nf, ng, nnode, node))
+                ng = node.g + cost
+                if npos not in g_map or ng < g_map[npos]:
+                    g_map[npos] = ng
+                    nf = ng + self._heuristic(npos, goal)
+                    parent_map[npos] = node.pos
+                    heapq.heappush(open_set, Node(npos, ng, nf))
 
         return None
 
