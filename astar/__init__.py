@@ -1,3 +1,3 @@
-from .astar_planner import AstarPlanner
+from .astar_planner import Astar
 
-__all__ = ["AstarPlanner"]
+__all__ = ["Astar"]

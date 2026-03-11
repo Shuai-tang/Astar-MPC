@@ -3,8 +3,6 @@ import numpy as np
 class Map:
     def __init__(self):
         self.map = np.zeros([500, 500])
-        self.start = [475, 25]
-        self.goal = [475, 475]
         self._build_maze()
         
     def _build_maze(self):
