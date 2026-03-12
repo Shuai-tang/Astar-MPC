@@ -1,31 +1,27 @@
 import numpy as np
 
+
 class Map:
     def __init__(self):
-        self.map = np.zeros([500, 500])
+        self.map = np.zeros([60, 60])
+        self._obstacles = []  # [(center, radius), ...]
         self._build_maze()
-        
+
     def _build_maze(self):
-        t = 6   # 墙体厚度
-        # 地图边界
-        self.map[0:t, :] = 1
-        self.map[-t:, :] = 1
-        self.map[:, 0:t] = 1
-        self.map[:, -t:] = 1
+        # 圆心障碍物：(行, 列), 半径（栅格数）
+        self._build_ratio(center=(30, 30), radius=8)
+        self._build_ratio(center=(15, 45), radius=5)
+        self._build_ratio(center=(45, 15), radius=6)
 
-        # 内部墙体
-        self.map[50:500, 50:50+t] = 1
-        self.map[0:450, 100:100+t] = 1
-        self.map[50:500, 150:150+t] = 1
-        self.map[0:450, 200:200+t] = 1
-        self.map[50:500, 250:250+t] = 1
-        self.map[0:450, 300:300+t] = 1
-        self.map[50:500, 350:350+t] = 1
-        self.map[0:450, 400:400+t] = 1
-        self.map[50:500, 450:450+t] = 1
+    def _build_ratio(self, center, radius):
+        self._obstacles.append((center, radius))
+        r0, c0 = center
+        h, w = self.map.shape
+        for i in range(h):
+            for j in range(w):
+                if (i - r0) ** 2 + (j - c0) ** 2 <= radius**2:
+                    self.map[i, j] = 1
 
-        # 中心障碍物
-        self.map[400:400+t, 0:40] = 1
-        self.map[300:300+t, 20:50] = 1
-    def get_matrix(self):
-        return self.map
+    def get_obstacle(self):
+        """返回障碍物列表，每项为 (圆心, 半径)，圆心为 (row, col)。"""
+        return self._obstacles

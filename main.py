@@ -1,6 +1,6 @@
 from env.map_3 import Map
 from astar.improverd_astar import Astar as Astar_improved
-from path_smooth.path_smooth import smooth_astar_path
+from path_smooth.path_smooth import PathSmoother
 from plt.plot_map_path import plot_three_paths
 from mpc import MPCController
 import numpy as np
@@ -47,12 +47,8 @@ def main():
     
     # ========== 轨迹平滑 ==========
     print("正在进行轨迹平滑...")
-    x_smooth, y_smooth, yaw_smooth = smooth_astar_path(
-        astar_path, 
-        step_size=0.5,
-        smoothing_factor=1.0,
-        use_gaussian=True
-    )
+    smoother = PathSmoother(step_size=0.5, smoothing_factor=1.0, use_gaussian=True)
+    x_smooth, y_smooth, yaw_smooth = smoother.smooth(astar_path)
     
     # 平滑路径格式：[(x, y, yaw), ...]
     smooth_path = [(float(x), float(y), float(yaw)) for x, y, yaw in zip(x_smooth, y_smooth, yaw_smooth)]

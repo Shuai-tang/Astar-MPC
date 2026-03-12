@@ -1,7 +1,7 @@
 from env.map_2 import Map
 from astar.improverd_astar import Astar as Astar_improved
 from astar.astar_planner import Astar
-from path_smooth.path_smooth import smooth_astar_path
+from path_smooth.path_smooth import PathSmoother
 from plt.plot_map_path import Plotter
 
 
@@ -15,12 +15,8 @@ def main():
     astar_improved_path = astar_improved.plan(m.map, start, goal)
 
     # 轨迹优化：对 A* 路径做平滑（样条插值 + 高斯滤波），得到可跟踪的参考轨迹
-    x_smooth, y_smooth, yaw_smooth = smooth_astar_path(
-        astar_improved_path,
-        step_size=0.5,
-        smoothing_factor=1.0,
-        use_gaussian=True,
-    )
+    smoother = PathSmoother(step_size=0.5, smoothing_factor=1.0, use_gaussian=True)
+    x_smooth, y_smooth, yaw_smooth = smoother.smooth(astar_improved_path)
     smooth_path = [(float(x), float(y)) for x, y in zip(x_smooth, y_smooth)]
 
     # 使用 Plotter 统一绘图
